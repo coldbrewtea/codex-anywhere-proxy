@@ -9,29 +9,10 @@
  */
 
 import { streamChatToResponses } from "../src/streaming.js";
+import { assert, skip } from "./helpers.js";
 
-// Inline test helpers (self-contained, no import from tests/helpers)
 const UPSTREAM = process.env.BOHRIUM_UPSTREAM || "https://open.bohrium.com/openapi/v1";
 const KEY = process.env.BOHRIUM_KEY || "";
-
-let passed = 0;
-let failed = 0;
-let skipped = 0;
-
-function assert(condition: boolean, msg: string) {
-  if (condition) {
-    console.log(`    ✓ ${msg}`);
-    passed++;
-  } else {
-    console.error(`    ✗ ${msg}`);
-    failed++;
-  }
-}
-
-function skipTest(msg: string) {
-  console.log(`    ⊘ ${msg}`);
-  skipped++;
-}
 
 function collectStream(
   upstreamResp: Response,
@@ -46,7 +27,9 @@ function collectStream(
       write: (chunk: string) => {
         for (const ln of chunk.split("\n")) {
           if (ln.startsWith("data: ")) {
-            try { events.push(JSON.parse(ln.slice(6))); } catch {}
+            const payload = ln.slice(6);
+            if (payload === "[DONE]") continue;
+            events.push(JSON.parse(payload));
           }
         }
       },
@@ -82,7 +65,7 @@ async function fetchUpstream(model: string, body: Record<string, any>): Promise<
 
 export async function run() {
   if (!KEY) {
-    skipTest("No BOHRIUM_KEY — skipping Bohrium compat tests");
+    skip("No BOHRIUM_KEY — skipping Bohrium compat tests");
     return;
   }
 
@@ -130,12 +113,8 @@ export async function run() {
 
     if (fc) {
       assert(fc.name === "calculate", "Tool name is 'calculate'");
-      try {
-        JSON.parse(fc.arguments);
-        console.log(`    ✓ Tool arguments are valid JSON: ${fc.arguments.slice(0, 80)}`);
-      } catch {
-        console.log(`    ✗ Tool arguments INVALID JSON: ${fc.arguments.slice(0, 100)}`);
-      }
+      JSON.parse(fc.arguments);
+      assert(true, `Tool arguments are valid JSON: ${fc.arguments.slice(0, 80)}`);
     }
 
     if (!fc) {
@@ -186,7 +165,4 @@ export async function run() {
       assert(createdIdx < completedIdx, "response.created before response.completed");
     }
   }
-
-  console.log(`\n─── Summary ───`);
-  console.log(`  Passed: ${passed}, Failed: ${failed}, Skipped: ${skipped}`);
 }
