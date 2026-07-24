@@ -12,7 +12,7 @@
  */
 
 import { readFileSync, existsSync } from "fs";
-import { UPSTREAM as CONFIG_UPSTREAM, MODELS_FILTER, MODELS_EXCLUDE } from "./config.js";
+import { UPSTREAM as CONFIG_UPSTREAM, MODELS_FILTER, MODELS_EXCLUDE, AVAILABLE_MODELS } from "./config.js";
 
 export interface ModelInfo {
   context_window: number;
@@ -267,7 +267,24 @@ export function getModelInfo(model: string): ModelInfo | undefined {
 
 /** Returns models filtered for the current upstream provider. */
 export function getAllModels(): Record<string, ModelInfo> {
-  return modelsCache.filteredModels;
+  const result = { ...modelsCache.filteredModels };
+  // Ensure configured available models are always present in the catalog.
+  // Codex uses /v1/models for subagent model selection; models not in
+  // models.dev (e.g. "aliyun/deepseek-v4-pro") must be injected here.
+  if (AVAILABLE_MODELS.length > 0) {
+    for (const slug of AVAILABLE_MODELS) {
+      if (!result[slug]) {
+        result[slug] = {
+          context_window: 200000,
+          max_output: 131072,
+          reasoning: true,
+          tool_call: true,
+          provider_name: "Custom",
+        };
+      }
+    }
+  }
+  return result;
 }
 
 /** Returns all models (unfiltered). Used by /models?q= search endpoint. */

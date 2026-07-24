@@ -129,17 +129,6 @@ export function responsesInputToChatMessages(body: Record<string, any>): any[] {
  *   (these are OpenAI Responses API built-ins with no chat/completions equivalent)
  */
 /**
- * Tool names that are handled client-side by Codex CLI.
- * For these tools, we strip the "model" parameter from the tool definition
- * because Codex tries to validate the model against its available_models list
- * (which is empty for non-OpenAI providers). Without a model param,
- * Codex inherits the parent model automatically.
- */
-const CODEX_AGENT_TOOLS = new Set([
-  "spawn_agent",
-]);
-
-/**
  * Tool names that Codex manages locally and should have their
  * output_schema stripped to avoid confusing non-OpenAI providers.
  */
@@ -182,15 +171,6 @@ export function responsesToolsToChatTools(
         parameters: t.parameters ? JSON.parse(JSON.stringify(t.parameters)) : undefined,
       };
 
-      // Strip "model" parameter from Codex agent tools so they inherit
-      // the parent model instead of sending an unknown model name.
-      if (CODEX_AGENT_TOOLS.has(t.name) && fnDef.parameters?.properties) {
-        delete fnDef.parameters.properties.model;
-        if (fnDef.parameters.required) {
-          fnDef.parameters.required = fnDef.parameters.required.filter((r: string) => r !== "model");
-        }
-      }
-
       // Strip output_schema from Codex-local agent tools — non-OpenAI providers reject it.
       if (CODEX_LOCAL_TOOLS.has(t.name)) {
         delete fnDef.output_schema;
@@ -232,12 +212,28 @@ export function responsesToolsToChatTools(
           if (namespace && subName) {
             toolNamespaces[subName] = namespace;
           }
+          let subDesc = subTool.description || t.description || "";
+          let subParams = subTool.parameters || { type: "object", properties: {} };
+          // Rewrite spawn_agent description in namespace path
+          if (subName === "spawn_agent" && subDesc) {
+            const marker = "Spawn a sub-agent for a well-scoped task.";
+            const idx = subDesc.indexOf(marker);
+            if (idx > 0) {
+              subDesc = "Spawn a sub-agent for a well-scoped task. Use `codex /model` to see available models. " + subDesc.slice(idx + marker.length);
+            }
+            // Update model param description
+            if (subParams.properties?.model) {
+              subParams = JSON.parse(JSON.stringify(subParams));
+              subParams.properties.model.description =
+                "Model override for the new agent. Use `codex /model` to see available models. Omit to inherit the parent model.";
+            }
+          }
           result.push({
             type: "function",
             function: {
               name: subName,
-              description: subTool.description || t.description || "",
-              parameters: subTool.parameters || { type: "object", properties: {} },
+              description: subDesc,
+              parameters: subParams,
             },
           });
         }

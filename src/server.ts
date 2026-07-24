@@ -38,6 +38,10 @@ export async function startServer() {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url || "/", `http://localhost:${PORT}`);
     const pathname = url.pathname;
+    // Log all non-OPTIONS requests for debugging (especially /v1/models fetches)
+    if (req.method !== "OPTIONS") {
+      console.log(`[REQ] ${req.method} ${pathname}${url.search || ""}`);
+    }
 
     // ─── Codex model catalog (GET /v1/models?client_version=...) ──
     if ((pathname === "/models" || pathname === "/v1/models") && req.method === "GET") {

@@ -117,6 +117,7 @@ Codex CLI has `/v1/responses/compact` and `/v1/memories/trace_summarize` endpoin
 
 ## Testing
 
+- **⚠️ PORT SAFETY:** The production proxy runs on port 4001 (config.toml). NEVER kill, restart, or occupy port 4001. The agent requires this proxy to function. Tests use `TEST_PORT` (8790) — always use the test runner (`test.ts`) which spawns a dedicated proxy on a separate port.
 - **Framework:** Custom test runner (no Vitest/Jest). `tests/helpers.ts` provides assertions, skip, and API helpers.
 - **Isolation:** `test.ts` spawns a dedicated proxy on `TEST_PORT` (default 8790 from `.env`), runs all suites, then kills it. No need to manually start/stop the proxy.
 - **Real API:** Tests make actual HTTP requests to the configured upstream provider. Requires valid `API_KEY` in `.env`.

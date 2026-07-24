@@ -34,9 +34,18 @@ export async function run() {
     assert(typeof first.auto_compact_token_limit === "number", "Has 'auto_compact_token_limit'");
     assert(first.auto_compact_token_limit > 0, "auto_compact_token_limit > 0");
     assert(first.shell_type === "shell_command", "shell_type is 'shell_command'");
-    assert(first.apply_patch_tool_type === "json", "apply_patch_tool_type is 'json'");
-    assert(first.web_search_tool_type === "disabled", "web_search_tool_type is 'disabled'");
+    assert(first.apply_patch_tool_type === "freeform", "apply_patch_tool_type is 'freeform'");
+    assert(first.web_search_tool_type === "text", "web_search_tool_type is 'text'");
     assert(Array.isArray(first.input_modalities), "Has 'input_modalities' array");
+    // Subagent support: Codex CLI uses multi_agent_version to determine
+    // which models can spawn sub-agents. Without this, Codex falls back
+    // to its built-in OpenAI models list.
+    assert(typeof first.multi_agent_version === 'string', "Has 'multi_agent_version' for subagent support");
+    assert(Array.isArray(first.service_tiers), "Has 'service_tiers' array");
+    assert(typeof first.use_responses_lite === 'boolean', "Has 'use_responses_lite' boolean");
+    if (first.tool_call) {
+      assert(first.tool_mode === 'code_mode_only', "tool_mode is 'code_mode_only' when tool_call is true");
+    }
   }
 
   // ─── Custom Tool Type Handling ─────────────────────────────────

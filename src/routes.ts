@@ -225,8 +225,8 @@ export function handleCodexModelsList(res: ServerResponse) {
     default_reasoning_summary: info.reasoning ? "auto" : null,
     support_verbosity: false,
     default_verbosity: null,
-    apply_patch_tool_type: "json",
-    web_search_tool_type: "disabled",
+    apply_patch_tool_type: "freeform",
+    web_search_tool_type: "text",
     truncation_policy: { mode: "bytes", limit: 10000 },
     supports_parallel_tool_calls: info.tool_call,
     supports_image_detail_original: false,
@@ -237,6 +237,12 @@ export function handleCodexModelsList(res: ServerResponse) {
     experimental_supported_tools: info.tool_call ? ["function"] : [],
     input_modalities: ["text"],
     supports_search_tool: false,
+    // Multi-agent support: tells Codex this model supports spawn_agent/sub-agents.
+    // The proxy handles namespace flattening for multi_agent_v1 in converters.ts.
+    multi_agent_version: "v1",
+    service_tiers: [],
+    use_responses_lite: false,
+    tool_mode: info.tool_call ? "code_mode_only" : undefined,
   }));
 
   res.writeHead(200, { "Content-Type": "application/json" });
